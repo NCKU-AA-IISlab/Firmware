@@ -232,14 +232,6 @@
 #define BOARD_BATTERY2_A_PER_V 0.0f
 #endif
 
-/* Conditional use of FMU GPIO
- * If the board use the PX4FMU driver and the board provides
- * BOARD_FMU_GPIO_TAB then we publish the logical BOARD_HAS_FMU_GPIO
- */
-#if defined(BOARD_FMU_GPIO_TAB)
-#  define BOARD_HAS_FMU_GPIO
-#endif
-
 /* Conditional use of PX4 PIO is Used to determine if the board
  * has a PX4IO processor.
  * We then publish the logical BOARD_USES_PX4IO
@@ -255,7 +247,7 @@
 #  else
 /*  Use PX4IO FW search paths defaults based on version */
 #    if BOARD_USES_PX4IO_VERSION == 2
-#      define PX4IO_FW_SEARCH_PATHS {"/etc/extras/px4io-v2.bin", "/fs/microsd/px4io2.bin", "/fs/microsd/px4io.bin", nullptr }
+#      define PX4IO_FW_SEARCH_PATHS {"/etc/extras/px4_io-v2_default.bin","/fs/microsd/px4_io-v2_default.bin", "/fs/microsd/px4io2.bin", nullptr }
 #    endif
 #  endif
 #endif
@@ -323,6 +315,14 @@
 #    define BOARD_ARMED_STATE_LED_ON()
 #  endif
 #endif //
+
+/* Provide an overridable default nop
+ * for BOARD_INDICATE_ARMED_STATE
+ */
+
+#if !defined(BOARD_INDICATE_ARMED_STATE)
+#  define BOARD_INDICATE_ARMED_STATE(on_armed)
+#endif
 
 /************************************************************************************
  * Public Data
@@ -500,56 +500,6 @@ __EXPORT bool board_supports_single_wire(uint32_t uxart_base);
 #  define board_read_VBUS_state() (px4_arch_gpioread(GPIO_OTGFS_VBUS) ? 0 : 1)
 #else
 int board_read_VBUS_state(void);
-#endif
-
-/************************************************************************************
- * Name: board_dma_alloc_init
- *
- * Description:
- *   All boards may optionally provide this API to instantiate a pool of
- *   memory for uses with FAST FS DMA operations.
- *
- *   Provision is controlled by declaring BOARD_DMA_ALLOC_POOL_SIZE in board_config.h
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on failure
- *   EPERM - board does not support function
- *   ENOMEM - There is not enough memory to satisfy allocation.
- *
- ************************************************************************************/
-#if defined(BOARD_DMA_ALLOC_POOL_SIZE)
-__EXPORT int board_dma_alloc_init(void);
-#else
-#define board_dma_alloc_init() (-EPERM)
-#endif
-
-/************************************************************************************
- * Name: board_get_dma_usage
- *
- * Description:
- *   All boards may optionally provide this API to supply instrumentation for a pool of
- *   memory used for DMA operations.
- *
- *   Provision is controlled by declaring BOARD_DMA_ALLOC_POOL_SIZE in board_config.h
- *
- * Input Parameters:
- *   dma_total     -  A pointer to receive the total allocation size of the memory
- *                    allocated with board_dma_alloc_init. It should be equal to
- *                    BOARD_DMA_ALLOC_POOL_SIZE.
- *   dma_used      -  A pointer to receive the current allocation in use.
- *   dma_peak_used -  A pointer to receive the peak allocation used.
- *
- * Returned Value:
- *   Zero (OK) is returned on success;
- *
- ************************************************************************************/
-#if defined(BOARD_DMA_ALLOC_POOL_SIZE)
-__EXPORT int board_get_dma_usage(uint16_t *dma_total, uint16_t *dma_used, uint16_t *dma_peak_used);
-#else
-#define board_get_dma_usage(dma_total,dma_used, dma_peak_used) (-ENOMEM)
 #endif
 
 /************************************************************************************
@@ -1082,6 +1032,24 @@ __EXPORT bool px4_spi_bus_external(int bus);
 #endif /* PX4_SPI_BUS_EXT */
 
 #endif /* BOARD_HAS_SIMPLE_HW_VERSIONING */
+
+/************************************************************************************
+ * Name: board_has_bus
+ *
+ ************************************************************************************/
+
+enum board_bus_types {
+	BOARD_SPI_BUS = 1,
+	BOARD_I2C_BUS = 2
+};
+
+#if defined(BOARD_HAS_BUS_MANIFEST)
+
+__EXPORT bool board_has_bus(enum board_bus_types type, uint32_t bus);
+
+#else
+#  define board_has_bus(t, b) true
+#endif /* BOARD_HAS_BUS_MANIFEST */
 
 /************************************************************************************
  * Name: board_hardfault_init

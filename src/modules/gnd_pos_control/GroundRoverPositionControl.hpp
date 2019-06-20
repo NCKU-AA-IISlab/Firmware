@@ -41,7 +41,7 @@
  * @author Marco Zorzi <mzorzi@student.ethz.ch>
  */
 
-#include <cfloat>
+#include <float.h>
 
 #include <drivers/drv_hrt.h>
 #include <lib/ecl/geo/geo.h>
@@ -67,7 +67,7 @@
 
 using matrix::Dcmf;
 
-using uORB::Subscription;
+using uORB::SubscriptionData;
 
 class GroundRoverPositionControl
 {
@@ -110,8 +110,8 @@ private:
 	vehicle_control_mode_s			_control_mode{};			/**< control mode */
 	vehicle_global_position_s		_global_pos{};			/**< global vehicle position */
 
-	Subscription<vehicle_attitude_s>	_sub_attitude;
-	Subscription<sensor_bias_s>	_sub_sensors;
+	SubscriptionData<vehicle_attitude_s>	_sub_attitude;
+	SubscriptionData<sensor_bias_s>	_sub_sensors;
 
 	perf_counter_t	_loop_perf;			/**< loop performance counter */
 

@@ -60,12 +60,13 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include <px4_time.h>
 #include <px4_log.h>
 #include <px4_getopt.h>
 #include <px4_tasks.h>
 #include <px4_posix.h>
-#include <px4_log.h>
 
 #include "apps.h"
 #include "px4_middleware.h"
@@ -94,7 +95,6 @@ void init_once();
 
 static void sig_int_handler(int sig_num);
 static void sig_fpe_handler(int sig_num);
-static void sig_segv_handler(int sig_num);
 
 static void register_sig_handler();
 static void set_cpu_scaling();
@@ -401,16 +401,17 @@ void register_sig_handler()
 	struct sigaction sig_pipe {};
 	sig_pipe.sa_handler = SIG_IGN;
 
-	// SIGSEGV
-	struct sigaction sig_segv {};
-	sig_segv.sa_handler = sig_segv_handler;
-	sig_segv.sa_flags = SA_RESTART | SA_SIGINFO;
-
+#ifdef __PX4_CYGWIN
+	// Do not catch SIGINT on Cygwin such that the process gets killed
+	// TODO: All threads should exit gracefully see https://github.com/PX4/Firmware/issues/11027
+	(void)sig_int; // this variable is unused
+#else
 	sigaction(SIGINT, &sig_int, nullptr);
+#endif
+
 	//sigaction(SIGTERM, &sig_int, nullptr);
 	sigaction(SIGFPE, &sig_fpe, nullptr);
 	sigaction(SIGPIPE, &sig_pipe, nullptr);
-	sigaction(SIGSEGV, &sig_segv, nullptr);
 }
 
 void sig_int_handler(int sig_num)
@@ -426,18 +427,9 @@ void sig_fpe_handler(int sig_num)
 {
 	fflush(stdout);
 	printf("\nfloating point exception\n");
-	PX4_BACKTRACE();
 	fflush(stdout);
 	px4_daemon::Pxh::stop();
 	_exit_requested = true;
-}
-
-void sig_segv_handler(int sig_num)
-{
-	fflush(stdout);
-	printf("\nSegmentation Fault\n");
-	PX4_BACKTRACE();
-	fflush(stdout);
 }
 
 void set_cpu_scaling()
@@ -544,7 +536,7 @@ int run_startup_script(const std::string &commands_file, const std::string &abso
 void wait_to_exit()
 {
 	while (!_exit_requested) {
-		usleep(100000);
+		px4_usleep(100000);
 	}
 }
 
@@ -594,11 +586,6 @@ bool is_already_running(int instance)
 
 	errno = 0;
 	return false;
-}
-
-bool px4_exit_requested(void)
-{
-	return _exit_requested;
 }
 
 bool file_exists(const std::string &name)

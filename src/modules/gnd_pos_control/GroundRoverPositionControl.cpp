@@ -65,8 +65,8 @@ GroundRoverPositionControl	*g_control = nullptr;
 
 GroundRoverPositionControl::GroundRoverPositionControl() :
 	/* performance counters */
-	_sub_attitude(ORB_ID(vehicle_attitude), 0, 0, nullptr),
-	_sub_sensors(ORB_ID(sensor_bias), 0, 0, nullptr),
+	_sub_attitude(ORB_ID(vehicle_attitude)),
+	_sub_sensors(ORB_ID(sensor_bias)),
 	_loop_perf(perf_alloc(PC_ELAPSED, "rover position control")) // TODO : do we even need these perf counters
 {
 	_parameter_handles.l1_period = param_find("GND_L1_PERIOD");
@@ -103,7 +103,7 @@ GroundRoverPositionControl::~GroundRoverPositionControl()
 
 		do {
 			/* wait 20ms */
-			usleep(20000);
+			px4_usleep(20000);
 
 			/* if we have given up, kill it */
 			if (++i > 50) {
@@ -484,8 +484,6 @@ GroundRoverPositionControl::task_main_trampoline(int argc, char *argv[])
 int
 GroundRoverPositionControl::start()
 {
-	ASSERT(_control_task == -1);
-
 	/* start the task */
 	_control_task = px4_task_spawn_cmd("gnd_pos_ctrl",
 					   SCHED_DEFAULT,
@@ -523,7 +521,7 @@ int gnd_pos_control_main(int argc, char *argv[])
 
 		/* avoid memory fragmentation by not exiting start handler until the task has fully started */
 		while (gnd_control::g_control == nullptr || !gnd_control::g_control->task_running()) {
-			usleep(50000);
+			px4_usleep(50000);
 			printf(".");
 			fflush(stdout);
 		}
